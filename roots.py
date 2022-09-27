@@ -38,9 +38,13 @@ class Scope:
     name: str
     items: list[int] = field(default_factory=list)
     def append(self, item): self.items.append(item)
-    def render(self):
+
+    def render_items(self):
         scope = id(self)
         fmt(scope, f"scope:{self.name}", *enumerate(range(len(self.items))))
+
+    def render_edges(self):
+        scope = id(self)
         for (i, addr) in enumerate(self.items):
             if addr is not None:
                 output.print(f"{scope}:{i} -> {addr};")
@@ -121,27 +125,38 @@ class Heap:
                 label = "not found"
 
         output.print("digraph {")
+
+        # set some default style
+        output.print(f"compound = true;")
+        output.print(f"labeljust = \"l\";")
+        output.print(f"labelloc = \"t\";")
         output.print(f"label = {quote(label)};")
         output.print("node [shape=record];")
         output.print("fontname=\"monospace\";")
-
-        # create the heap area
-        output.print("subgraph cluster_heap {")
-        output.print("label = heap; style=rounded; color=grey90; ")
-        for item in self.items.values():
-            item.render()
-        output.print("}")
 
         # create the stack
         output.print("subgraph cluster_stack {")
         output.print("label = stack; style=rounded; color=grey90")
         last = self.scopes[0]
-        last.render()
+        last.render_items()
         for scope in self.scopes[1:]:
-            scope.render()
+            scope.render_items()
             output.print(f"{id(last)} -> {id(scope)};")
             last = scope
         output.print("}")
+
+        # create the heap area
+        output.print("subgraph cluster_heap {")
+        output.print("label = heap; style=rounded; color=grey90; ")
+        output.print("_ [style=invisible];")
+        for item in self.items.values():
+            item.render()
+        output.print("}")
+
+        # add the edges
+        for scope in self.scopes:
+            scope.render_edges()
+
         output.print("}")
         output.next()
 
